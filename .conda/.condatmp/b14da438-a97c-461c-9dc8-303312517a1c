@@ -1,0 +1,13 @@
+prefix=d:/faculdade/nba_api/.conda/Library
+exec_prefix=d:/faculdade/nba_api/.conda/Library
+libdir=d:/faculdade/nba_api/.conda/Library/lib
+sharedlibdir=d:/faculdade/nba_api/.conda/Library/lib
+includedir=d:/faculdade/nba_api/.conda/Library/include
+
+Name: zlib
+Description: zlib compression library
+Version: 1.3.1
+
+Requires:
+Libs: -L${libdir} -L${sharedlibdir} -lz
+Cflags: -I${includedir}

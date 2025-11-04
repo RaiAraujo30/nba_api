@@ -8,6 +8,81 @@ import numpy as np
 import sys
 import os
 
+st.markdown("""
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .sidebar-icon { margin-right: 8px; }
+        .info-box {
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin: 0.5rem 0;
+            font-size: 1rem;
+            line-height: 1.6;
+        }
+        .info-box i {
+            margin-right: 10px;
+            font-size: 1.1rem;
+        }
+        .info-blue {
+            background-color: #e3f2fd;
+            color: #1565c0;
+            border-left: 4px solid #2196F3;
+        }
+        .info-green {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            border-left: 4px solid #4caf50;
+        }
+        .info-yellow {
+            background-color: #fff8e1;
+            color: #f57f17;
+            border-left: 4px solid #ffc107;
+        }
+        .info-red {
+            background-color: #ffebee;
+            color: #c62828;
+            border-left: 4px solid #f44336;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
+st.markdown("""
+    <style>
+    /* Botão primário Streamlit */
+    button[kind="primary"] {
+        background-color: #2196F3 !important;
+        color: #fff !important;
+        border: none !important;
+        font-weight: bold;
+        border-radius: 8px !important;
+    }
+    button[kind="primary"]:hover {
+        background-color: #1565c0 !important;
+        color: #fff !important;
+    }
+    /* Tab selector Streamlit */
+    .stTabs [data-testid="stTab"] {
+        color: #fff !important;
+        border-bottom: none !important;
+    }
+    .stTabs [aria-selected="true"] {
+        color: #1565c0 !important;
+        border-bottom: none !important;
+    }
+    .stTabs [aria-selected="false"] {
+        border-bottom: none !important;
+    }
+    /* Remove barra vermelha extra (pseudo-elemento) */
+    .stTabs [data-testid="stTab"]:after {
+        background: transparent !important;
+        border: none !important;
+    }
+    .st-av {
+        background-color: #1565c0 !important;
+    }
+    </style>
+""", unsafe_allow_html=True) 
+
 # Adicionar diretório atual ao path para importar módulos
 current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, current_dir)
@@ -27,11 +102,31 @@ st.set_page_config(
 )
 
 # Título principal
-st.title("🏀 Análise de Regressão NBA")
+st.markdown(
+    '<h1><i class="fas fa-basketball-ball" style="color: #2196F3;"></i> Análise de Regressão NBA</h1>',
+    unsafe_allow_html=True
+)
 st.markdown("---")
 
 # Sidebar para configurações
-st.sidebar.header("⚙️ Configurações")
+st.sidebar.markdown(
+    '<h3><i class="fas fa-cog sidebar-icon" style="color: #2196F3;"></i>Configurações</h3>',
+    unsafe_allow_html=True
+)
+
+st.markdown("""
+    <style>
+    [data-testid="stRadio"] div[role="radiogroup"] > label > div:first-child {
+        border: 2px solid #2196F3 !important;
+        background-color: #2196F3 !important;
+    }
+    /* Muda cor do texto */
+    [data-testid="stRadio"] label {
+        color: #fff !important;
+        font-weight: bold;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
 # Seleção de tipo de entidade
 entity_type = st.sidebar.radio(
@@ -52,7 +147,11 @@ feature_engineer = FeatureEngineer()
 
 # Busca de entidade
 st.sidebar.markdown("---")
-st.sidebar.subheader("🔍 Buscar " + entity_type)
+st.sidebar.markdown(
+    f'<h3><i class="fas fa-search sidebar-icon" style="color: #2196F3;"></i>Buscar {entity_type}</h3>',
+    unsafe_allow_html=True
+)
+
 
 if entity_type == "Jogador":
     player_name = st.sidebar.text_input("Nome do jogador:", placeholder="Ex: LeBron James")
@@ -63,41 +162,47 @@ if entity_type == "Jogador":
             if player:
                 st.session_state['selected_entity'] = player
                 st.session_state['entity_type'] = 'player'
-                st.sidebar.success(f"Jogador encontrado: {player['full_name']}")
+                st.sidebar.markdown(f'<div class="info-box info-green"><i class="fas fa-check-circle"></i>Jogador encontrado: {player["full_name"]}</div>', unsafe_allow_html=True)
             else:
                 st.sidebar.error("Jogador não encontrado!")
 else:
     team_name = st.sidebar.text_input("Nome do time:", placeholder="Ex: Los Angeles Lakers, Lakers, LAL")
-    st.sidebar.caption("💡 Você pode buscar por nome completo, cidade, apelido ou abreviação")
+    st.sidebar.caption('<i class="fas fa-lightbulb"></i>  Você pode buscar por nome completo, cidade, apelido ou abreviação', unsafe_allow_html=True)
     
     if st.sidebar.button("Buscar Time"):
         with st.spinner("Buscando time..."):
             if not team_name or team_name.strip() == "":
-                st.sidebar.warning("⚠️ Digite o nome de um time")
+                st.sidebar.markdown('<div style="padding: 0.5rem; background-color: #fff3cd; border-radius: 0.25rem;"><i class="fas fa-exclamation-triangle" style="color: #856404; margin-right: 8px;"></i>Digite o nome de um time</div>', unsafe_allow_html=True)
             else:
                 team = collector.find_team(team_name.strip())
                 if team:
                     st.session_state['selected_entity'] = team
                     st.session_state['entity_type'] = 'team'
-                    st.sidebar.success(f"✅ Time encontrado: {team['full_name']}")
-                    st.sidebar.info(f"ID: {team['id']} | Abreviação: {team['abbreviation']}")
+                    st.sidebar.markdown(f'<div class="info-box info-green"><i class="fas fa-check-circle"></i>Time encontrado: {team["full_name"]}</div>', unsafe_allow_html=True)
+                    # st.sidebar.info(f"ID: {team['id']} | Abreviação: {team['abbreviation']}")
                 else:
-                    st.sidebar.error(f"❌ Time '{team_name}' não encontrado!")
-                    st.sidebar.info("💡 Tente buscar por:\n"
-                                   "- Nome completo (ex: 'Los Angeles Lakers')\n"
-                                   "- Cidade (ex: 'Los Angeles')\n"
-                                   "- Apelido (ex: 'Lakers')\n"
-                                   "- Abreviação (ex: 'LAL')")
+                    st.sidebar.markdown(f'<div style="padding: 0.5rem; background-color: #f8d7da; border-radius: 0.25rem;"><i class="fas fa-times-circle" style="color: #721c24; margin-right: 8px;"></i>Time \'{team_name}\' não encontrado!</div>', unsafe_allow_html=True)
+                    st.sidebar.markdown(
+                        '<div style="padding: 0.5rem; background-color: #e3f2fd; border-radius: 0.25rem;">'
+                        '<i class="fas fa-lightbulb" style="color: #2196F3; margin-right: 8px;"></i>'
+                        'Tente buscar por:<br>'
+                        '- Nome completo (ex: \'Los Angeles Lakers\')<br>'
+                        '- Cidade (ex: \'Los Angeles\')<br>'
+                        '- Apelido (ex: \'Lakers\')<br>'
+                        '- Abreviação (ex: \'LAL\')'
+                        '</div>',
+                        unsafe_allow_html=True
+                    )
 
 # Se uma entidade foi selecionada
 if 'selected_entity' in st.session_state:
     entity = st.session_state['selected_entity']
     entity_type = st.session_state['entity_type']
     
-    st.header(f"📊 Análise: {entity['full_name']}")
+    st.markdown(f'<h2></i>Análise: {entity["full_name"]}</h2>', unsafe_allow_html=True)
     
     # Carregar dados
-    if st.button("🔄 Carregar Dados", type="primary"):
+    if st.button("Carregar Dados", type="primary"):
         with st.spinner("Carregando dados da NBA..."):
             try:
                 if entity_type == 'player':
@@ -110,16 +215,12 @@ if 'selected_entity' in st.session_state:
                     if len(df) > 0:
                         st.session_state['game_log'] = df
                         st.session_state['features_df'] = None
-                        st.success(f"✅ Dados carregados com sucesso! {len(df)} jogos encontrados.")
+                        st.markdown(f'<div class="info-box info-green"><i class="fas fa-check-circle"></i>Dados carregados com sucesso! {len(df)} jogos encontrados.</div>', unsafe_allow_html=True)
                         st.rerun()  # Recarregar a página para mostrar os dados
                     else:
                         # Verificar se é problema de temporada ou realmente não há dados
-                        st.warning(f"⚠️ Dados carregados, mas nenhum jogo encontrado para {entity['full_name']} na temporada {season}.")
-                        st.info(f"💡 **Possíveis causas:**\n"
-                               f"- A temporada {season} pode ainda não ter começado ou não ter dados disponíveis na API\n"
-                               f"- Tente usar uma temporada anterior (ex: 2023-24)\n"
-                               f"- Verifique se o {'jogador' if entity_type == 'player' else 'time'} jogou na temporada {season}\n"
-                               f"- A API da NBA pode ter atraso na disponibilização dos dados")
+                        st.markdown(f'<div style="padding: 0.5rem; background-color: #fff3cd; border-radius: 0.25rem;"><i class="fas fa-exclamation-triangle" style="color: #856404; margin-right: 8px;"></i>Dados carregados, mas nenhum jogo encontrado para {entity["full_name"]} na temporada {season}.</div>', unsafe_allow_html=True)
+                        st.info(f"💡 **Possíveis causas:**\n- A temporada {season} pode ainda não ter começado ou não ter dados disponíveis na API\n- Tente usar uma temporada anterior (ex: 2023-24)\n- Verifique se o {'jogador' if entity_type == 'player' else 'time'} jogou na temporada {season}\n- A API da NBA pode ter atraso na disponibilização dos dados")
                         st.session_state['game_log'] = df  # Salvar mesmo se vazio para debug
                         
                         # Mostrar preview do DataFrame vazio para debug
@@ -127,14 +228,10 @@ if 'selected_entity' in st.session_state:
                             st.write(f"DataFrame shape: {df.shape}")
                             st.write(f"Colunas: {df.columns.tolist() if hasattr(df, 'columns') else 'N/A'}")
                 else:
-                    st.error(f"❌ Não foi possível carregar os dados. Verifique se a temporada {season} está disponível para {entity['full_name']}.")
-                    st.info(f"💡 **Dicas:**\n"
-                           f"- Verifique se a temporada {season} existe e tem dados disponíveis\n"
-                           f"- Tente usar uma temporada anterior (ex: 2023-24)\n"
-                           f"- Verifique sua conexão com a internet\n"
-                           f"- Verifique os logs no console para mais detalhes")
+                    st.markdown(f'<div style="padding: 0.5rem; background-color: #f8d7da; border-radius: 0.25rem;"><i class="fas fa-times-circle" style="color: #721c24; margin-right: 8px;"></i>Não foi possível carregar os dados. Verifique se a temporada {season} está disponível para {entity["full_name"]}.</div>', unsafe_allow_html=True)
+                    st.info(f"💡 **Dicas:**\n- Verifique se a temporada {season} existe e tem dados disponíveis\n- Tente usar uma temporada anterior (ex: 2023-24)\n- Verifique sua conexão com a internet\n- Verifique os logs no console para mais detalhes")
             except Exception as e:
-                st.error(f"❌ Erro ao carregar dados: {str(e)}")
+                st.markdown(f'<div style="padding: 0.5rem; background-color: #f8d7da; border-radius: 0.25rem;"><i class="fas fa-times-circle" style="color: #721c24; margin-right: 8px;"></i>Erro ao carregar dados: {str(e)}</div>', unsafe_allow_html=True)
                 with st.expander("🔍 Ver detalhes do erro"):
                     st.exception(e)
     
@@ -144,12 +241,12 @@ if 'selected_entity' in st.session_state:
         
         # Mostrar informações sobre os dados carregados
         if df is not None and len(df) > 0:
-            st.info(f"✅ {len(df)} jogos carregados para {entity['full_name']} na temporada {season}")
+            st.markdown(f'<div class="info-box info-green"><i class="fas fa-check-circle"></i>{len(df)} jogos carregados para {entity["full_name"]} na temporada {season}</div>', unsafe_allow_html=True)
         elif df is not None:
-            st.warning(f"⚠️ Dados carregados, mas nenhum jogo encontrado para {entity['full_name']} na temporada {season}")
+            st.markdown(f'<div style="padding: 0.5rem; background-color: #fff3cd; border-radius: 0.25rem;"><i class="fas fa-exclamation-triangle" style="color: #856404; margin-right: 8px;"></i>Dados carregados, mas nenhum jogo encontrado para {entity["full_name"]} na temporada {season}</div>', unsafe_allow_html=True)
         
         # Criar features
-        if st.button("🔧 Criar Features"):
+        if st.button("Criar Features"):
             with st.spinner("Criando features..."):
                 if entity_type == 'player':
                     features_df = feature_engineer.create_player_features(df)
@@ -158,16 +255,16 @@ if 'selected_entity' in st.session_state:
                 
                 if features_df is not None and not features_df.empty:
                     st.session_state['features_df'] = features_df
-                    st.success(f"Features criadas! {len(features_df)} amostras disponíveis.")
+                    st.markdown(f'<div class="info-box info-green"><i class="fas fa-check-circle"></i>Features criadas! {len(features_df)} amostras disponíveis.</div>', unsafe_allow_html=True)
                 else:
-                    st.error("Não foi possível criar features. Dados insuficientes.")
+                    st.markdown('<div style="padding: 0.5rem; background-color: #f8d7da; border-radius: 0.25rem;"><i class="fas fa-times-circle" style="color: #721c24; margin-right: 8px;"></i>Não foi possível criar features. Dados insuficientes.</div>', unsafe_allow_html=True)
         
         # Mostrar dados mesmo sem features criadas
         if df is not None and len(df) > 0:
             st.markdown("---")
             
             # Tabs para diferentes análises
-            tab1, tab2, tab3 = st.tabs(["📈 Regressão Linear", "📊 Regressão Logística", "📋 Dados"])
+            tab1, tab2, tab3 = st.tabs(["Regressão Linear", "Regressão Logística", "Dados"])
             
             # Verificar se features foram criadas
             if 'features_df' in st.session_state and st.session_state['features_df'] is not None:
@@ -199,9 +296,9 @@ if 'selected_entity' in st.session_state:
                         default=available_features[:5] if len(available_features) >= 5 else available_features
                     )
                     
-                    if st.button("🚀 Treinar Modelo de Regressão Linear", type="primary"):
+                    if st.button("Treinar Modelo de Regressão Linear", type="primary"):
                         if len(selected_features) == 0:
-                            st.warning("Selecione pelo menos uma variável independente!")
+                            st.markdown('<div style="padding: 0.5rem; background-color: #fff3cd; border-radius: 0.25rem;"><i class="fas fa-exclamation-triangle" style="color: #856404; margin-right: 8px;"></i>Selecione pelo menos uma variável independente!</div>', unsafe_allow_html=True)
                         else:
                             with st.spinner("Treinando modelo..."):
                                 # Preparar dados
@@ -214,7 +311,7 @@ if 'selected_entity' in st.session_state:
                                 y = y[mask]
                                 
                                 if len(X) < 2:
-                                    st.error("Dados insuficientes após limpeza!")
+                                    st.markdown('<div style="padding: 0.5rem; background-color: #2196F3; border-radius: 0.25rem;"><i class="fas fa-times-circle" style="color: #721c24; margin-right: 8px;"></i>Dados insuficientes após limpeza!</div>', unsafe_allow_html=True)
                                 else:
                                     # Split treino/teste
                                     from sklearn.model_selection import train_test_split
@@ -302,7 +399,7 @@ if 'selected_entity' in st.session_state:
                                     )
                                     st.pyplot(fig4)
                 else:
-                    st.info("ℹ️ Crie as features primeiro clicando em 'Criar Features' para poder treinar modelos de regressão.")
+                    st.info("( ℹ ) Crie as features primeiro clicando em 'Criar Features' para poder treinar modelos de regressão logística.")
             
             with tab2:
                 st.subheader("Regressão Logística")
@@ -315,7 +412,7 @@ if 'selected_entity' in st.session_state:
                         "Variável Dependente (Y):",
                         ["target_victory", "target_pts", "target_reb", "target_ast"],
                         format_func=lambda x: {
-                            "target_victory": "🏆 Vitória/Derrota (1/0)",
+                            "target_victory": "Vitória/Derrota (1/0)",
                             "target_pts": "Pontos",
                             "target_reb": "Rebotes",
                             "target_ast": "Assistências"
@@ -353,11 +450,11 @@ if 'selected_entity' in st.session_state:
                             help=f"Valores disponíveis: min={target_min:.1f}, max={target_max:.1f}, mediana={target_median:.1f}"
                         )
                     else:
-                        st.info("ℹ️ Usando variável binária de Vitória/Derrota. Vitória = 1, Derrota = 0")
+                        st.info("( ℹ ) Usando variável binária de Vitória/Derrota. Vitória = 1, Derrota = 0")
                     
-                    if st.button("🚀 Treinar Modelo de Regressão Logística", type="primary"):
+                    if st.button("Treinar Modelo de Regressão Logística", type="primary"):
                         if len(selected_features_log) == 0:
-                            st.warning("Selecione pelo menos uma variável independente!")
+                             st.markdown('<div style="padding: 0.5rem; background-color: #fff3cd; border-radius: 0.25rem;"><i class="fas fa-exclamation-triangle" style="color: #856404; margin-right: 8px;"></i>Selecione pelo menos uma variável independente!</div>', unsafe_allow_html=True)
                         else:
                             with st.spinner("Treinando modelo..."):
                                 # Preparar dados
@@ -376,7 +473,7 @@ if 'selected_entity' in st.session_state:
                                 y_binary = y_binary[mask]
                                 
                                 if len(X) < 2:
-                                    st.error("Dados insuficientes após limpeza!")
+                                    st.markdown('<div style="padding: 0.5rem; background-color: #f8d7da; border-radius: 0.25rem;"><i class="fas fa-times-circle" style="color: #2196F3; margin-right: 8px;"></i>Dados insuficientes após limpeza!</div>', unsafe_allow_html=True)
                                 else:
                                     # Split treino/teste
                                     from sklearn.model_selection import train_test_split
@@ -419,7 +516,7 @@ if 'selected_entity' in st.session_state:
                                     
                                     # Mostrar probabilidades de vitória se for target_victory
                                     if target_var_log == "target_victory":
-                                        st.subheader("📊 Análise de Probabilidades")
+                                        st.markdown('<h3><i class="fas fa-chart-pie" style="color: #2196F3; margin-right: 8px;"></i>Análise de Probabilidades</h3>', unsafe_allow_html=True)
                                         prob_test = test_results['probabilities'][:, 1]
                                         
                                         # Mostrar algumas probabilidades de exemplo
@@ -435,8 +532,7 @@ if 'selected_entity' in st.session_state:
                                         st.dataframe(prob_df.head(10)[['Probabilidade Vitória', 'Previsão', 'Resultado']], width='stretch')
                                         
                                         # Exemplo de interpretação
-                                        st.success(f"💡 **Interpretação:** O modelo prevê a probabilidade de vitória para cada jogo. "
-                                                  f"Valores > 0.5 indicam previsão de vitória, valores < 0.5 indicam previsão de derrota.")
+                                        st.markdown('<div class="info-box info-green"><i class="fas fa-lightbulb"></i><strong>Interpretação:</strong> O modelo prevê a probabilidade de vitória para cada jogo. Valores &gt; 0.5 indicam previsão de vitória, valores &lt; 0.5 indicam previsão de derrota.</div>', unsafe_allow_html=True)
                                     
                                     # Mostrar coeficientes
                                     st.subheader("Coeficientes do Modelo")
@@ -514,18 +610,18 @@ if 'selected_entity' in st.session_state:
                                     report_df = pd.DataFrame(test_results['classification_report']).transpose()
                                     st.dataframe(report_df, width='stretch')
                 else:
-                    st.info("ℹ️ Crie as features primeiro clicando em 'Criar Features' para poder treinar modelos de regressão logística.")
+                    st.info("( ℹ )  Crie as features primeiro clicando em 'Criar Features' para poder treinar modelos de regressão logística.")
             
             with tab3:
-                st.subheader("Dados")
+                st.markdown('<h3><i class="fas fa-database sidebar-icon" style="color: #2196F3;"></i>Dados</h3>', unsafe_allow_html=True)
                 
                 # Mostrar game log
                 if df is not None and len(df) > 0:
                     st.write("**Game Log:**")
                     st.dataframe(df, width='stretch')
-                    st.info(f"📊 Total de jogos: {len(df)}")
+                    st.markdown(f'<div class="info-box info-blue"><i class="fas fa-chart-bar"></i>Total de jogos: {len(df)}</div>', unsafe_allow_html=True)
                 else:
-                    st.warning("⚠️ Nenhum dado de jogo disponível.")
+                    st.markdown('<div class="info-box info-yellow"><i class="fas fa-exclamation-triangle"></i>Nenhum dado de jogo disponível.</div>', unsafe_allow_html=True)
                 
                 # Mostrar features
                 if features_df is not None and len(features_df) > 0:
@@ -536,17 +632,11 @@ if 'selected_entity' in st.session_state:
                     st.write("**Estatísticas Descritivas:**")
                     st.dataframe(features_df.describe(), width='stretch')
                 else:
-                    st.info("ℹ️ Features ainda não foram criadas. Clique em 'Criar Features' para gerar.")
+                    st.markdown('<div class="info-box info-blue"><i class="fas fa-info-circle"></i>Features ainda não foram criadas. Clique em "Criar Features" para gerar.</div>', unsafe_allow_html=True)
 
 else:
-    st.info("👈 Use a barra lateral para buscar um jogador ou time e começar a análise.")
+    st.markdown('<div class="info-box info-blue"><i class="fas fa-arrow-left"></i>Use a barra lateral para buscar um jogador ou time e começar a análise.</div>', unsafe_allow_html=True)
 
 # Footer
 st.markdown("---")
-st.markdown(
-    "<div style='text-align: center; color: gray;'>"
-    "Atividade de Redes Neurais Artificiais - Regressão Linear e Logística"
-    "</div>",
-    unsafe_allow_html=True
-)
-
+st.markdown('<div style="text-align: center; color: gray;">Atividade de Redes Neurais Artificiais - Regressão Linear e Logística</div>', unsafe_allow_html=True)
