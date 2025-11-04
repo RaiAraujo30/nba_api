@@ -391,13 +391,7 @@ if 'selected_entity' in st.session_state:
                                     )
                                     st.pyplot(fig3)
                                     
-                                    # Gráfico 4: Resíduos
-                                    fig4 = visualizer.plot_residuals(
-                                        y_test,
-                                        test_results['predictions'],
-                                        title="Análise de Resíduos"
-                                    )
-                                    st.pyplot(fig4)
+
                 else:
                     st.info("( ℹ ) Crie as features primeiro clicando em 'Criar Features' para poder treinar modelos de regressão logística.")
             
