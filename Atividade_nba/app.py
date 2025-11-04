@@ -109,10 +109,6 @@ st.sidebar.markdown(
     unsafe_allow_html=True
 )
 
-st.sidebar.markdown(
-    '<div class="info-box info-blue"><i class="fas fa-basketball-ball"></i>Análise restrita ao <strong>Golden State Warriors</strong></div>',
-    unsafe_allow_html=True,
-)
 
 st.markdown(
     """
