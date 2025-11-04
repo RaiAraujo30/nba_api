@@ -207,7 +207,6 @@ class LogisticRegressionModel:
         accuracy = accuracy_score(y, y_pred)
         cm = confusion_matrix(y, y_pred)
         
-        # Classificação report
         report = classification_report(y, y_pred, output_dict=True)
         
         return {
