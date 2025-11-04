@@ -115,109 +115,86 @@ class NBADataCollector:
         try:
             time.sleep(0.6)  # Rate limiting
             
+            # Primeiro tentar usar TeamGameLog
             team_log = teamgamelog.TeamGameLog(
                 team_id=team_id,
                 season=self.season,
                 season_type_all_star=self.season_type
             )
             
-            # Verificar resposta bruta primeiro
-            raw_dict = team_log.get_dict()
-            
-            # Debug: verificar estrutura da resposta
-            print(f"DEBUG - Tipo de raw_dict: {type(raw_dict)}")
-            if raw_dict:
-                print(f"DEBUG - Keys em raw_dict: {list(raw_dict.keys())}")
-            
-            # Verificar se há dados na resposta bruta
-            has_data = False
-            row_count = 0
-            headers = None
-            row_set = None
-            
-            # Verificar resultSets primeiro
-            if raw_dict and 'resultSets' in raw_dict:
-                result_sets = raw_dict['resultSets']
-                print(f"DEBUG - resultSets encontrado: {type(result_sets)}, tamanho: {len(result_sets) if isinstance(result_sets, list) else 'N/A'}")
-                if isinstance(result_sets, list) and len(result_sets) > 0:
-                    first_set = result_sets[0]
-                    print(f"DEBUG - Tipo do primeiro set: {type(first_set)}")
-                    if isinstance(first_set, dict):
-                        print(f"DEBUG - Keys no primeiro set: {list(first_set.keys())}")
-                        if 'rowSet' in first_set:
-                            row_set = first_set['rowSet']
-                            row_count = len(row_set) if row_set else 0
-                            print(f"DEBUG - rowSet encontrado: {row_count} linhas")
-                            if row_count > 0:
-                                has_data = True
-                                print(f"DEBUG - Primeira linha: {row_set[0]}")
-                        if 'headers' in first_set:
-                            headers = first_set['headers']
-                            print(f"DEBUG - Headers encontrados: {len(headers) if headers else 0} colunas")
-                        if 'name' in first_set:
-                            print(f"DEBUG - Nome do dataset: {first_set['name']}")
-            
             # Tentar obter DataFrame usando o método normal
             df = None
             try:
-                # Verificar se o atributo team_game_log existe e foi carregado
-                if hasattr(team_log, 'team_game_log'):
-                    if team_log.team_game_log is not None:
-                        # Verificar se o data_set tem dados
-                        data_dict = team_log.team_game_log.get_dict()
-                        print(f"DEBUG - team_game_log data_dict: {list(data_dict.keys()) if isinstance(data_dict, dict) else type(data_dict)}")
-                        if isinstance(data_dict, dict) and 'headers' in data_dict:
-                            print(f"DEBUG - Headers no data_dict: {len(data_dict['headers']) if data_dict['headers'] else 0}")
-                            print(f"DEBUG - Data no data_dict: {len(data_dict.get('data', []))}")
-                        
-                        df = team_log.team_game_log.get_data_frame()
-                        print(f"DEBUG - DataFrame obtido via team_game_log: {df is not None}, shape: {df.shape if df is not None else 'N/A'}")
-                    else:
-                        print(f"DEBUG - team_game_log existe mas é None")
-                else:
-                    print(f"DEBUG - team_game_log não existe no objeto")
-                    # Tentar usar get_data_frames() como alternativa
-                    try:
-                        data_frames = team_log.get_data_frames()
-                        print(f"DEBUG - get_data_frames() retornou: {len(data_frames) if data_frames else 0} dataframes")
-                        if data_frames and len(data_frames) > 0:
-                            df = data_frames[0]
-                            print(f"DEBUG - DataFrame obtido via get_data_frames(): shape: {df.shape if df is not None else 'N/A'}")
-                    except Exception as e2:
-                        print(f"DEBUG - Erro ao usar get_data_frames(): {e2}")
+                if hasattr(team_log, 'team_game_log') and team_log.team_game_log is not None:
+                    df = team_log.team_game_log.get_data_frame()
             except Exception as e:
                 print(f"WARNING - Erro ao obter DataFrame via team_game_log: {e}")
-                import traceback
-                traceback.print_exc()
             
-            # Se DataFrame é None ou vazio, mas há dados na resposta bruta, construir manualmente
-            if (df is None or (df.empty if df is not None else True)) and has_data and headers and row_set:
-                try:
-                    df = pd.DataFrame(row_set, columns=headers)
-                    print(f"INFO - DataFrame construído manualmente: {len(df)} linhas, {len(df.columns)} colunas")
-                except Exception as e:
-                    print(f"WARNING - Erro ao construir DataFrame manualmente: {e}")
-                    import traceback
-                    traceback.print_exc()
+            # Se TeamGameLog retornou dados, usar
+            if df is not None and not df.empty:
+                # Garantir que as colunas numéricas sejam numéricas
+                numeric_columns = ['PTS', 'REB', 'AST', 'FGM', 'FGA', 'FG_PCT',
+                                   'FG3M', 'FG3A', 'FG3_PCT', 'FTM', 'FTA', 'FT_PCT',
+                                   'OREB', 'DREB', 'STL', 'BLK', 'TOV', 'PF', 'MIN']
+                
+                for col in numeric_columns:
+                    if col in df.columns:
+                        df[col] = pd.to_numeric(df[col], errors='coerce')
+                
+                return df
             
-            # Verificar se retornou algo válido
-            if df is None:
-                return None
+            # Se TeamGameLog não funcionou, usar LeagueGameLog como alternativa
+            print(f"INFO - TeamGameLog vazio, tentando LeagueGameLog como alternativa...")
+            from nba_api.stats.endpoints import leaguegamelog
+            from nba_api.stats.library.parameters import PlayerOrTeamAbbreviation
             
-            # Se retornou um DataFrame vazio
-            if df.empty:
+            time.sleep(0.6)  # Rate limiting adicional
+            
+            league_log = leaguegamelog.LeagueGameLog(
+                season=self.season,
+                season_type_all_star=self.season_type,
+                player_or_team_abbreviation=PlayerOrTeamAbbreviation.team  # Buscar dados de times
+            )
+            
+            df_all = league_log.league_game_log.get_data_frame()
+            
+            if df_all is not None and not df_all.empty:
+                # Filtrar pelo team_id
+                if 'TEAM_ID' in df_all.columns:
+                    df = df_all[df_all['TEAM_ID'] == team_id].copy()
+                    
+                    if not df.empty:
+                        # Mapear colunas para o formato esperado (similar ao TeamGameLog)
+                        # TeamGameLog usa: Team_ID, Game_ID, GAME_DATE, MATCHUP, WL, etc.
+                        # LeagueGameLog usa: TEAM_ID, GAME_ID, GAME_DATE, MATCHUP, WL, etc.
+                        # A maioria das colunas já está no formato correto, só precisamos renomear algumas
+                        column_mapping = {
+                            'TEAM_ID': 'Team_ID',
+                            'TEAM_ABBREVIATION': 'Team_Abbreviation',
+                            'TEAM_NAME': 'Team_Name'
+                        }
+                        df = df.rename(columns=column_mapping)
+                        
+                        # Garantir que as colunas numéricas sejam numéricas
+                        numeric_columns = ['PTS', 'REB', 'AST', 'FGM', 'FGA', 'FG_PCT',
+                                           'FG3M', 'FG3A', 'FG3_PCT', 'FTM', 'FTA', 'FT_PCT',
+                                           'OREB', 'DREB', 'STL', 'BLK', 'TOV', 'PF', 'MIN']
+                        
+                        for col in numeric_columns:
+                            if col in df.columns:
+                                df[col] = pd.to_numeric(df[col], errors='coerce')
+                        
+                        print(f"INFO - Dados obtidos via LeagueGameLog: {len(df)} jogos")
+                        return df
+                    else:
+                        print(f"WARNING - LeagueGameLog retornou dados, mas nenhum jogo encontrado para team_id {team_id}")
+                        return pd.DataFrame()
+                else:
+                    print(f"WARNING - LeagueGameLog não tem coluna TEAM_ID")
+                    return pd.DataFrame()
+            else:
+                print(f"WARNING - LeagueGameLog também retornou vazio")
                 return pd.DataFrame()
-            
-            # Garantir que as colunas numéricas sejam numéricas
-            numeric_columns = ['PTS', 'REB', 'AST', 'FGM', 'FGA', 'FG_PCT',
-                               'FG3M', 'FG3A', 'FG3_PCT', 'FTM', 'FTA', 'FT_PCT',
-                               'OREB', 'DREB', 'STL', 'BLK', 'TOV', 'PF', 'MIN']
-            
-            for col in numeric_columns:
-                if col in df.columns:
-                    df[col] = pd.to_numeric(df[col], errors='coerce')
-            
-            return df
             
         except Exception as e:
             print(f"Erro ao obter log de jogos do time: {e}")

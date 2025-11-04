@@ -333,12 +333,21 @@ if 'selected_entity' in st.session_state:
                     )
                     
                     # Threshold para classificação binária
+                    # Calcular max_value dinamicamente baseado nos dados
+                    target_max = float(features_df[target_var_log].max())
+                    target_min = float(features_df[target_var_log].min())
+                    target_median = float(features_df[target_var_log].median())
+                    
+                    # Usar um valor maior que o máximo para permitir flexibilidade
+                    max_threshold = max(100.0, target_max * 1.1) if target_max > 0 else 100.0
+                    
                     threshold = st.number_input(
                         "Threshold para classificação binária:",
-                        min_value=0.0,
-                        max_value=100.0,
-                        value=float(features_df[target_var_log].median()),
-                        step=1.0
+                        min_value=target_min,
+                        max_value=max_threshold,
+                        value=target_median,
+                        step=1.0,
+                        help=f"Valores disponíveis: min={target_min:.1f}, max={target_max:.1f}, mediana={target_median:.1f}"
                     )
                     
                     if st.button("🚀 Treinar Modelo de Regressão Logística", type="primary"):
