@@ -99,6 +99,9 @@ class FeatureEngineer:
                 'game_date': current_game['GAME_DATE'],
                 'matchup': current_game['MATCHUP'],
                 'wl': current_game['WL'],
+                
+                # Variável binária de vitória (1 = vitória, 0 = derrota)
+                'target_victory': 1 if current_game['WL'] == 'W' else 0,
             }
             
             features_list.append(feature_row)
@@ -186,6 +189,9 @@ class FeatureEngineer:
                 'game_date': current_game['GAME_DATE'],
                 'matchup': current_game['MATCHUP'],
                 'wl': current_game['WL'],
+                
+                # Variável binária de vitória (1 = vitória, 0 = derrota)
+                'target_victory': 1 if current_game['WL'] == 'W' else 0,
             }
             
             features_list.append(feature_row)
@@ -216,5 +222,5 @@ class FeatureEngineer:
     
     def get_target_variables(self):
         """Retorna lista de variáveis alvo disponíveis"""
-        return ['target_pts', 'target_reb', 'target_ast']
+        return ['target_pts', 'target_reb', 'target_ast', 'target_victory']
 

@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 import pandas as pd
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, roc_curve, auc, roc_auc_score
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -212,6 +212,133 @@ class RegressionVisualizer:
         ax2.grid(True, alpha=0.3)
         
         plt.suptitle(title, fontsize=14, fontweight='bold')
+        plt.tight_layout()
+        return fig
+    
+    @staticmethod
+    def plot_roc_curve(y_true, y_pred_proba, title="Curva ROC"):
+        """
+        Gráfico de Curva ROC (Receiver Operating Characteristic)
+        
+        Args:
+            y_true: Valores reais (binários)
+            y_pred_proba: Probabilidades previstas (array de probabilidades)
+            title: Título do gráfico
+        """
+        fig, ax = plt.subplots(figsize=(10, 8))
+        
+        # Converter para arrays numpy se necessário
+        y_true = y_true.values if isinstance(y_true, pd.Series) else (y_true if isinstance(y_true, np.ndarray) else np.array(y_true))
+        y_pred_proba = y_pred_proba if isinstance(y_pred_proba, np.ndarray) else np.array(y_pred_proba)
+        
+        # Se y_pred_proba é 2D (array de probabilidades para cada classe), usar a segunda coluna
+        if len(y_pred_proba.shape) > 1 and y_pred_proba.shape[1] > 1:
+            y_pred_proba = y_pred_proba[:, 1]
+        
+        # Calcular ROC curve
+        fpr, tpr, thresholds = roc_curve(y_true, y_pred_proba)
+        roc_auc = auc(fpr, tpr)
+        
+        # Plot da curva ROC
+        ax.plot(fpr, tpr, color='darkorange', lw=2, label=f'ROC curve (AUC = {roc_auc:.2f})')
+        ax.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--', label='Random Classifier')
+        
+        ax.set_xlim([0.0, 1.0])
+        ax.set_ylim([0.0, 1.05])
+        ax.set_xlabel('Taxa de Falsos Positivos (1 - Especificidade)', fontsize=12)
+        ax.set_ylabel('Taxa de Verdadeiros Positivos (Sensibilidade)', fontsize=12)
+        ax.set_title(title, fontsize=14, fontweight='bold')
+        ax.legend(loc="lower right", fontsize=11)
+        ax.grid(True, alpha=0.3)
+        
+        plt.tight_layout()
+        return fig
+    
+    @staticmethod
+    def plot_predicted_probabilities(y_true, y_pred_proba, title="Gráfico de Probabilidades Previstas"):
+        """
+        Gráfico de Probabilidades Previstas
+        
+        Args:
+            y_true: Valores reais (binários)
+            y_pred_proba: Probabilidades previstas
+            title: Título do gráfico
+        """
+        fig, ax = plt.subplots(figsize=(12, 6))
+        
+        # Converter para arrays numpy se necessário
+        y_true = y_true.values if isinstance(y_true, pd.Series) else (y_true if isinstance(y_true, np.ndarray) else np.array(y_true))
+        y_pred_proba = y_pred_proba if isinstance(y_pred_proba, np.ndarray) else np.array(y_pred_proba)
+        
+        # Se y_pred_proba é 2D, usar a segunda coluna
+        if len(y_pred_proba.shape) > 1 and y_pred_proba.shape[1] > 1:
+            y_pred_proba = y_pred_proba[:, 1]
+        
+        # Ordenar por probabilidade
+        sorted_indices = np.argsort(y_pred_proba)
+        y_true_sorted = y_true[sorted_indices]
+        y_pred_proba_sorted = y_pred_proba[sorted_indices]
+        
+        # Plot
+        colors = ['red' if y == 0 else 'green' for y in y_true_sorted]
+        ax.scatter(range(len(y_pred_proba_sorted)), y_pred_proba_sorted, c=colors, alpha=0.6, s=30)
+        
+        # Linha de threshold 0.5
+        ax.axhline(y=0.5, color='blue', linestyle='--', linewidth=2, label='Threshold = 0.5')
+        
+        ax.set_xlabel('Amostra (ordenada por probabilidade)', fontsize=12)
+        ax.set_ylabel('Probabilidade Prevista', fontsize=12)
+        ax.set_title(title, fontsize=14, fontweight='bold')
+        ax.set_ylim([-0.05, 1.05])
+        ax.grid(True, alpha=0.3)
+        
+        # Adicionar legenda de cores
+        from matplotlib.patches import Patch
+        legend_elements = [
+            Patch(facecolor='green', label='Vitória Real (1)'),
+            Patch(facecolor='red', label='Derrota Real (0)'),
+            Patch(facecolor='none', edgecolor='blue', linestyle='--', label='Threshold = 0.5')
+        ]
+        ax.legend(handles=legend_elements, loc='best', fontsize=11)
+        
+        plt.tight_layout()
+        return fig
+    
+    @staticmethod
+    def plot_feature_importance(model, feature_names, title="Gráfico de Importância de Variáveis"):
+        """
+        Gráfico de Importância de Variáveis
+        
+        Args:
+            model: Modelo treinado (deve ter atributo coef_ ou feature_importances_)
+            feature_names: Lista de nomes das features
+            title: Título do gráfico
+        """
+        fig, ax = plt.subplots(figsize=(12, 8))
+        
+        # Obter coeficientes ou importância
+        if hasattr(model, 'coef_'):
+            # Para regressão logística, usar valor absoluto dos coeficientes
+            importances = np.abs(model.coef_[0])
+        elif hasattr(model, 'feature_importances_'):
+            importances = model.feature_importances_
+        else:
+            raise ValueError("Modelo não tem atributo coef_ ou feature_importances_")
+        
+        # Criar DataFrame para facilitar ordenação
+        importance_df = pd.DataFrame({
+            'feature': feature_names,
+            'importance': importances
+        }).sort_values('importance', ascending=True)
+        
+        # Plot horizontal bar
+        ax.barh(importance_df['feature'], importance_df['importance'], color='steelblue', alpha=0.7)
+        
+        ax.set_xlabel('Importância (Valor Absoluto dos Coeficientes)', fontsize=12)
+        ax.set_ylabel('Variáveis', fontsize=12)
+        ax.set_title(title, fontsize=14, fontweight='bold')
+        ax.grid(True, alpha=0.3, axis='x')
+        
         plt.tight_layout()
         return fig
 

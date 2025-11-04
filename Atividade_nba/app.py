@@ -308,13 +308,14 @@ if 'selected_entity' in st.session_state:
                 st.subheader("Regressão Logística")
                 
                 if features_df is not None and len(features_df) > 0:
-                    st.info("Para regressão logística, precisamos converter a variável dependente em binária.")
+                    st.info("Para regressão logística, você pode usar variáveis binárias (como Vitória/Derrota) ou converter variáveis contínuas em binárias usando um threshold.")
                     
                     # Seleção de variável dependente
                     target_var_log = st.selectbox(
                         "Variável Dependente (Y):",
-                        ["target_pts", "target_reb", "target_ast"],
+                        ["target_victory", "target_pts", "target_reb", "target_ast"],
                         format_func=lambda x: {
+                            "target_victory": "🏆 Vitória/Derrota (1/0)",
                             "target_pts": "Pontos",
                             "target_reb": "Rebotes",
                             "target_ast": "Assistências"
@@ -332,23 +333,27 @@ if 'selected_entity' in st.session_state:
                         key="log_features"
                     )
                     
-                    # Threshold para classificação binária
-                    # Calcular max_value dinamicamente baseado nos dados
-                    target_max = float(features_df[target_var_log].max())
-                    target_min = float(features_df[target_var_log].min())
-                    target_median = float(features_df[target_var_log].median())
-                    
-                    # Usar um valor maior que o máximo para permitir flexibilidade
-                    max_threshold = max(100.0, target_max * 1.1) if target_max > 0 else 100.0
-                    
-                    threshold = st.number_input(
-                        "Threshold para classificação binária:",
-                        min_value=target_min,
-                        max_value=max_threshold,
-                        value=target_median,
-                        step=1.0,
-                        help=f"Valores disponíveis: min={target_min:.1f}, max={target_max:.1f}, mediana={target_median:.1f}"
-                    )
+                    # Threshold apenas se não for target_victory (já é binário)
+                    threshold = None
+                    if target_var_log != "target_victory":
+                        # Calcular max_value dinamicamente baseado nos dados
+                        target_max = float(features_df[target_var_log].max())
+                        target_min = float(features_df[target_var_log].min())
+                        target_median = float(features_df[target_var_log].median())
+                        
+                        # Usar um valor maior que o máximo para permitir flexibilidade
+                        max_threshold = max(100.0, target_max * 1.1) if target_max > 0 else 100.0
+                        
+                        threshold = st.number_input(
+                            "Threshold para classificação binária:",
+                            min_value=target_min,
+                            max_value=max_threshold,
+                            value=target_median,
+                            step=1.0,
+                            help=f"Valores disponíveis: min={target_min:.1f}, max={target_max:.1f}, mediana={target_median:.1f}"
+                        )
+                    else:
+                        st.info("ℹ️ Usando variável binária de Vitória/Derrota. Vitória = 1, Derrota = 0")
                     
                     if st.button("🚀 Treinar Modelo de Regressão Logística", type="primary"):
                         if len(selected_features_log) == 0:
@@ -359,8 +364,11 @@ if 'selected_entity' in st.session_state:
                                 X = features_df[selected_features_log].copy()
                                 y = features_df[target_var_log].copy()
                                 
-                                # Converter para binário
-                                y_binary = (y > threshold).astype(int)
+                                # Converter para binário se necessário
+                                if target_var_log == "target_victory":
+                                    y_binary = y.astype(int)  # Já é binário
+                                else:
+                                    y_binary = (y > threshold).astype(int)
                                 
                                 # Remover valores nulos
                                 mask = ~(X.isnull().any(axis=1) | y_binary.isnull())
@@ -390,13 +398,45 @@ if 'selected_entity' in st.session_state:
                                     st.session_state['logistic_y_test'] = y_test
                                     
                                     # Mostrar métricas
-                                    col1, col2 = st.columns(2)
+                                    col1, col2, col3 = st.columns(3)
                                     
                                     with col1:
                                         st.metric("Accuracy (Teste)", f"{test_results['accuracy']:.4f}")
                                     
                                     with col2:
-                                        st.metric("Threshold", f"{threshold:.1f}")
+                                        if threshold is not None:
+                                            st.metric("Threshold", f"{threshold:.1f}")
+                                        else:
+                                            st.metric("Tipo", "Binário (Vitória/Derrota)")
+                                    
+                                    with col3:
+                                        # Calcular probabilidade média de vitória
+                                        if target_var_log == "target_victory":
+                                            prob_victory = test_results['probabilities'][:, 1].mean()
+                                            st.metric("Prob. Média Vitória", f"{prob_victory:.2%}")
+                                        else:
+                                            st.metric("Amostras", f"{len(y_test)}")
+                                    
+                                    # Mostrar probabilidades de vitória se for target_victory
+                                    if target_var_log == "target_victory":
+                                        st.subheader("📊 Análise de Probabilidades")
+                                        prob_test = test_results['probabilities'][:, 1]
+                                        
+                                        # Mostrar algumas probabilidades de exemplo
+                                        prob_df = pd.DataFrame({
+                                            'Probabilidade Vitória': prob_test,
+                                            'Previsão': test_results['predictions'],
+                                            'Real': y_test.values
+                                        })
+                                        prob_df['Resultado'] = prob_df['Real'].map({1: 'Vitória', 0: 'Derrota'})
+                                        prob_df = prob_df.sort_values('Probabilidade Vitória', ascending=False)
+                                        
+                                        st.write("**Exemplos de Probabilidades Previstas:**")
+                                        st.dataframe(prob_df.head(10)[['Probabilidade Vitória', 'Previsão', 'Resultado']], width='stretch')
+                                        
+                                        # Exemplo de interpretação
+                                        st.success(f"💡 **Interpretação:** O modelo prevê a probabilidade de vitória para cada jogo. "
+                                                  f"Valores > 0.5 indicam previsão de vitória, valores < 0.5 indicam previsão de derrota.")
                                     
                                     # Mostrar coeficientes
                                     st.subheader("Coeficientes do Modelo")
@@ -408,15 +448,66 @@ if 'selected_entity' in st.session_state:
                                     })
                                     st.dataframe(coef_df, width='stretch')
                                     
-                                    # Matriz de confusão
-                                    st.subheader("Matriz de Confusão")
+                                    # Visualizações
+                                    st.subheader("Visualizações")
                                     visualizer = RegressionVisualizer()
-                                    fig = visualizer.plot_confusion_matrix(
+                                    
+                                    # Gráfico 1: Matriz de Confusão
+                                    st.write("**1. Matriz de Confusão**")
+                                    fig1 = visualizer.plot_confusion_matrix(
                                         y_test,
                                         test_results['predictions'],
                                         title="Matriz de Confusão"
                                     )
-                                    st.pyplot(fig)
+                                    st.pyplot(fig1)
+                                    
+                                    # Gráfico 2: Curva ROC
+                                    st.write("**2. Curva ROC (Receiver Operating Characteristic)**")
+                                    fig2 = visualizer.plot_roc_curve(
+                                        y_test,
+                                        test_results['probabilities'],
+                                        title="Curva ROC"
+                                    )
+                                    st.pyplot(fig2)
+                                    
+                                    # Gráfico 3: Probabilidades Previstas
+                                    st.write("**3. Gráfico de Probabilidades Previstas**")
+                                    fig3 = visualizer.plot_predicted_probabilities(
+                                        y_test,
+                                        test_results['probabilities'],
+                                        title="Gráfico de Probabilidades Previstas"
+                                    )
+                                    st.pyplot(fig3)
+                                    
+                                    # Gráfico 4: Importância de Variáveis
+                                    st.write("**4. Gráfico de Importância de Variáveis**")
+                                    fig4 = visualizer.plot_feature_importance(
+                                        model.model,
+                                        selected_features_log,
+                                        title="Importância de Variáveis"
+                                    )
+                                    st.pyplot(fig4)
+                                    
+                                    # Gráfico 5: Dispersão com linha de regressão (para regressão logística)
+                                    st.write("**5. Diagrama de Dispersão**")
+                                    fig5 = visualizer.plot_scatter_with_regression(
+                                        X_test.iloc[:, 0] if len(selected_features_log) > 0 else X_test,
+                                        y_test,
+                                        test_results['predictions'],
+                                        title="Diagrama de Dispersão com Linha de Regressão"
+                                    )
+                                    st.pyplot(fig5)
+                                    
+                                    # Gráfico 6: Tendência com intervalo de confiança
+                                    st.write("**6. Tendência com Intervalo de Confiança**")
+                                    fig6 = visualizer.plot_trend_with_confidence(
+                                        X_test.iloc[:, 0] if len(selected_features_log) > 0 else X_test,
+                                        y_test,
+                                        test_results['predictions'],
+                                        model.model,
+                                        title="Tendência com Intervalo de Confiança"
+                                    )
+                                    st.pyplot(fig6)
                                     
                                     # Classification report
                                     st.subheader("Relatório de Classificação")
