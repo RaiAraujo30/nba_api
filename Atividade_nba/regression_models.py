@@ -43,6 +43,9 @@ class LinearRegressionModel:
                 columns=X_train.columns,
                 index=X_train.index
             )
+        else:
+            # Não usar scaler quando desabilitado para evitar NotFittedError no predict
+            self.scaler = None
         
         self.model.fit(X_train, y)
         self.is_fitted = True
@@ -144,6 +147,9 @@ class LogisticRegressionModel:
                 columns=X_train.columns,
                 index=X_train.index
             )
+        else:
+            # Não usar scaler quando desabilitado para evitar NotFittedError no predict
+            self.scaler = None
         
         self.model.fit(X_train, y)
         self.is_fitted = True
