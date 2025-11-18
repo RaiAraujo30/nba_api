@@ -262,15 +262,15 @@ class MLPConfig:
 
 
 def build_mlp(input_dim: int, cfg: MLPConfig) -> keras.Model:
-    model = keras.Sequential()
-    model.add(layers.Input(shape=(input_dim,)))
+    layer_list = [layers.Input(shape=(input_dim,))]
     for units in cfg.hidden_layers:
-        model.add(layers.Dense(units, activation=cfg.activation))
+        layer_list.append(layers.Dense(units, activation=cfg.activation))
         if cfg.batch_norm:
-            model.add(layers.BatchNormalization())
+            layer_list.append(layers.BatchNormalization())
         if cfg.dropout and cfg.dropout > 0:
-            model.add(layers.Dropout(cfg.dropout))
-    model.add(layers.Dense(1, activation="sigmoid"))
+            layer_list.append(layers.Dropout(cfg.dropout))
+    layer_list.append(layers.Dense(1, activation="sigmoid"))
+    model = keras.Sequential(layer_list)
     return model
 
 
