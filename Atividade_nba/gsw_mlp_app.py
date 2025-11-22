@@ -68,6 +68,7 @@ class MLPConfig:
     patience: int = 20
     learning_rate: float = 0.001
     use_batch_norm: bool = False
+    optimizer: str = "adam"  # "adam", "sgd", or "rmsprop"
 
 
 def build_mlp(input_dim: int, cfg: MLPConfig) -> keras.Model:
@@ -100,16 +101,32 @@ def build_mlp(input_dim: int, cfg: MLPConfig) -> keras.Model:
 
 
 def train_mlp(X: np.ndarray, y: np.ndarray, cfg: MLPConfig):
-    """Treina MLP com Adam optimizer e callbacks avançados."""
+    """Treina MLP com optimizer configurável (Adam, SGD ou RMSProp) e callbacks avançados."""
     set_seed(42)
     
     model = build_mlp(X.shape[1], cfg)
     
-    # Optimizer com clipnorm para estabilidade
-    optimizer = keras.optimizers.Adam(
-        learning_rate=cfg.learning_rate,
-        clipnorm=1.0
-    )
+    # Escolher optimizer baseado na configuração
+    if cfg.optimizer.lower() == "adam":
+        optimizer = keras.optimizers.Adam(
+            learning_rate=cfg.learning_rate,
+            clipnorm=1.0
+        )
+    elif cfg.optimizer.lower() == "sgd":
+        optimizer = keras.optimizers.SGD(
+            learning_rate=cfg.learning_rate,
+            momentum=0.9,  # Momentum para acelerar convergência
+            nesterov=True,  # Nesterov momentum para melhor performance
+            clipnorm=1.0
+        )
+    elif cfg.optimizer.lower() == "rmsprop":
+        optimizer = keras.optimizers.RMSprop(
+            learning_rate=cfg.learning_rate,
+            rho=0.9,  # Decay rate padrão
+            clipnorm=1.0
+        )
+    else:
+        raise ValueError(f"Optimizer '{cfg.optimizer}' não suportado. Use 'adam', 'sgd' ou 'rmsprop'.")
     
     model.compile(
         optimizer=optimizer,
@@ -259,7 +276,7 @@ def plot_game_predictions(y_true: np.ndarray, y_pred: np.ndarray):
 
 st.set_page_config(page_title="GSW MLP", page_icon="🏀", layout="wide")
 st.title("🏀 Golden State Warriors - MLP Classifier")
-st.caption("Previsão de vitória/derrota usando MLP (Adam Optimizer)")
+st.caption("Previsão de vitória/derrota usando MLP (Adam, SGD ou RMSProp)")
 
 # Sidebar - Configurações
 with st.sidebar:
@@ -277,6 +294,34 @@ with st.sidebar:
     dropout = st.slider("Taxa de Dropout", 0.0, 0.5, 0.30, 0.05)
     
     st.subheader("Treinamento")
+    optimizer_choice = st.selectbox(
+        "Otimizador", 
+        ["Adam", "SGD", "RMSProp"], 
+        index=0,
+        help="Adam: Adaptativo e robusto | SGD: Clássico com momentum | RMSProp: Bom para RNNs e dados não-estacionários"
+    )
+    
+    with st.expander("ℹ️ Sobre os Otimizadores"):
+        st.markdown("""
+        **Adam (Adaptive Moment Estimation)**
+        - ✅ Mais popular e robusto
+        - ✅ Adapta o learning rate automaticamente
+        - ✅ Funciona bem na maioria dos casos
+        - ⚡ Combina momentum + RMSProp
+        
+        **SGD (Stochastic Gradient Descent)**
+        - ✅ Algoritmo clássico e bem compreendido
+        - ✅ Com Nesterov momentum para melhor convergência
+        - ⚠️ Pode ser mais lento que Adam
+        - 💡 Bom para entender fundamentos de otimização
+        
+        **RMSProp (Root Mean Square Propagation)**
+        - ✅ Adapta learning rate por parâmetro
+        - ✅ Funciona bem com dados não-estacionários
+        - ✅ Originalmente desenvolvido para RNNs
+        - 💡 Intermediário entre SGD e Adam
+        """)
+    
     learning_rate = st.select_slider("Learning Rate", options=[0.0001, 0.0005, 0.001, 0.005, 0.01], value=0.001)
     epochs = st.slider("Épocas Máximas", 50, 500, 430, 10)
     batch_size = st.selectbox("Batch Size", [8, 16, 32, 64], index=2)  # 32
@@ -371,11 +416,12 @@ if train_button:
         validation_split=val_split,
         patience=patience,
         learning_rate=learning_rate,
-        use_batch_norm=use_batch_norm
+        use_batch_norm=use_batch_norm,
+        optimizer=optimizer_choice.lower()
     )
     
-    # Mostrar arquitetura
-    st.info(f"🏗️ Arquitetura: {' → '.join(map(str, hidden_layers))} → 1 (Sigmoid)")
+    # Mostrar arquitetura e optimizer
+    st.info(f"🏗️ Arquitetura: {' → '.join(map(str, hidden_layers))} → 1 (Sigmoid) | 🔧 Optimizer: {optimizer_choice}")
     
     # Treinar
     with st.spinner("⏳ Treinando MLP..."):
@@ -456,8 +502,8 @@ if train_button:
     
     # ==================== COMPARAÇÃO COM REGRESSÕES ====================
     st.markdown("---")
-    st.header("📊 Comparação: MLP vs Regressões")
-    st.caption("Comparando previsões (classe binária) da MLP com Regressão Logística e Linear")
+    st.header(f"📊 Comparação: MLP ({optimizer_choice}) vs Regressões")
+    st.caption(f"Comparando previsões (classe binária) da MLP (usando {optimizer_choice}) com Regressão Logística e Linear")
     
     with st.spinner("Treinando modelos de regressão para comparação..."):
         # Preparar dados em DataFrame para os modelos de regressão
@@ -487,7 +533,7 @@ if train_button:
     # Tabela comparativa de acurácia
     st.subheader("🎯 Acurácia dos Modelos")
     comparison_acc = pd.DataFrame({
-        "Modelo": ["Regressão Linear", "Regressão Logística", "MLP (Adam)"],
+        "Modelo": ["Regressão Linear", "Regressão Logística", f"MLP ({optimizer_choice})"],
         "Acurácia": [lin_acc, log_acc, mlp_acc],
         "Acertos": [int(lin_acc * len(y_test)), int(log_acc * len(y_test)), int(mlp_acc * len(y_test))],
         "Erros": [len(y_test) - int(lin_acc * len(y_test)), 
@@ -507,7 +553,7 @@ if train_button:
         st.metric(f"{emoji} Regressão Logística", f"{log_acc:.2%}")
     with col3:
         emoji = "🥇" if best_idx == 2 else ""
-        st.metric(f"{emoji} MLP (Adam)", f"{mlp_acc:.2%}")
+        st.metric(f"{emoji} MLP ({optimizer_choice})", f"{mlp_acc:.2%}")
     
     st.dataframe(comparison_acc.style.format({"Acurácia": "{:.2%}"}), use_container_width=True)
     
@@ -574,4 +620,4 @@ else:
     st.info("👆 Configure os parâmetros na barra lateral e clique em 'Treinar MLP'")
 
 st.markdown("---")
-st.caption("🏀 GSW MLP Classifier (Adam Optimizer)")
+st.caption("🏀 GSW MLP Classifier - Suporta Adam, SGD e RMSProp")
